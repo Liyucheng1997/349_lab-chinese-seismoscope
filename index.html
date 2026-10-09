@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>候风地动仪 · 三维复原</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="scene"></canvas>
+  <div id="labels"></div>
+
+  <header class="title">
+    <div class="seal"><span>张</span><span>衡</span></div>
+    <div>
+      <h1>候风地动仪</h1>
+      <p>东汉阳嘉元年（公元132年）· 张衡造 · 1:1 三维复原</p>
+    </div>
+  </header>
+
+  <!-- 左侧：视图与地震控制 -->
+  <aside id="left" class="panel">
+    <button class="collapse" data-target="left" title="收起/展开">≡</button>
+    <div class="panel-body">
+      <section>
+        <h3>视图</h3>
+        <div class="seg" id="modes">
+          <button data-mode="appearance" class="on">外观</button>
+          <button data-mode="cut">剖视</button>
+          <button data-mode="xray">透视</button>
+          <button data-mode="explode">分解</button>
+        </div>
+        <div class="row cams">
+          <button data-cam="front">正视</button>
+          <button data-cam="dragon">龙首特写</button>
+          <button data-cam="inside">机构特写</button>
+          <button data-cam="aerial">俯瞰地震波</button>
+        </div>
+      </section>
+
+      <section>
+        <h3>模拟地震</h3>
+        <div class="compass-wrap">
+          <svg id="compass" viewBox="-100 -100 200 200" aria-label="选择震中方位"></svg>
+          <div class="compass-info">
+            <div class="k">震中方位</div>
+            <div class="v" id="epiText">西 · 270°</div>
+            <div class="hint">点击或拖动罗盘选择</div>
+          </div>
+        </div>
+        <label class="slider">
+          <span>地震强度 <b id="intVal">1.0</b></span>
+          <input type="range" id="intensity" min="0.4" max="1.6" step="0.05" value="1" />
+        </label>
+        <label class="slider">
+          <span>时间流速 <b id="tsVal">×0.40</b></span>
+          <input type="range" id="timescale" min="0.05" max="1" step="0.05" value="0.4" />
+        </label>
+        <div class="row presets">
+          <button id="preset138" title="永和三年（138年）陇西地震">公元138年 · 陇西地震</button>
+          <button id="presetRandom">随机震中</button>
+        </div>
+        <div class="row actions">
+          <button id="quake" class="primary">▶ 发生地震 <kbd>空格</kbd></button>
+          <button id="reset">↺ 复位 <kbd>R</kbd></button>
+        </div>
+      </section>
+
+      <section>
+        <h3>显示</h3>
+        <div class="checks">
+          <label><input type="checkbox" id="optLabels" checked /> 部件标注</label>
+          <label><input type="checkbox" id="optDims" /> 尺寸标注</label>
+          <label><input type="checkbox" id="optWaves" checked /> 地震波</label>
+          <label><input type="checkbox" id="optFollow" checked /> 镜头跟随</label>
+          <label><input type="checkbox" id="optSound" checked /> 声音</label>
+          <label><input type="checkbox" id="optRotate" /> 自动旋转</label>
+        </div>
+      </section>
+    </div>
+  </aside>
+
+  <!-- 右侧：原理步骤与图表 -->
+  <aside id="right" class="panel">
+    <button class="collapse" data-target="right" title="收起/展开">≡</button>
+    <div class="panel-body">
+      <section>
+        <h3>工作原理 · 七步</h3>
+        <ol id="steps">
+          <li><b>震源发震</b><span>远方地震同时发出 P 波（纵波，快）与 S 波（横波，慢而猛）。</span></li>
+          <li><b>P 波到达</b><span>地面连同仪体，沿“震中—仪器”连线方向突然平移。</span></li>
+          <li><b>都柱守静</b><span>悬垂的都柱（重摆）因惯性几乎不动，相对仪体偏向震中一侧。</span></li>
+          <li><b>触动八道</b><span>都柱足盘撞上朝向震中那一道的滑杆，将其推出。</span></li>
+          <li><b>牙机发动</b><span>滑杆外端的斜面顶起顶杆，撬动龙颌杠杆，龙口张开。</span></li>
+          <li><b>龙吐铜丸</b><span>铜丸坠入下方蟾蜍口中，“振声激扬”，值守者闻声而觉。</span></li>
+          <li><b>施关锁定</b><span>其余七道被锁，“关”升起扣住都柱，随后更猛烈的 S 波也不会再触发其他龙。</span></li>
+        </ol>
+      </section>
+      <section>
+        <h3>俯视 · 都柱相对仪体的位移</h3>
+        <canvas id="topview" class="chart square"></canvas>
+      </section>
+      <section>
+        <h3>地震记录 · 地面位移</h3>
+        <canvas id="trace" class="chart"></canvas>
+      </section>
+    </div>
+  </aside>
+
+  <div id="result" class="result hidden"></div>
+  <div class="hintbar">拖动旋转 · 滚轮缩放 · 右键平移 · <a href="#" id="openInfo">史料与原理</a></div>
+
+  <!-- 史料与原理 -->
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <button class="close" id="closeInfo" aria-label="关闭">×</button>
+      <nav class="tabs">
+        <button data-tab="t1" class="on">史料原文</button>
+        <button data-tab="t2">工作原理</button>
+        <button data-tab="t3">复原方案</button>
+        <button data-tab="t4">尺寸与说明</button>
+      </nav>
+      <div class="tab on" id="t1">
+        <p class="src">《后汉书·张衡传》（南朝宋·范晔）</p>
+        <blockquote>
+          阳嘉元年，复造候风地动仪。以精铜铸成，员径八尺，合盖隆起，形似酒尊，饰以篆文山龟鸟兽之形。中有都柱，傍行八道，施关发机。外有八龙，首衔铜丸，下有蟾蜍，张口承之。其牙机巧制，皆隐在尊中，覆盖周密无际。如有地动，尊则振龙，机发吐丸，而蟾蜍衔之。振声激扬，伺者因此觉知。虽一龙发机，而七首不动，寻其方面，乃知震之所在。验之以事，合契若神。自书典所记，未之有也。尝一龙机发而地不觉动，京师学者咸怪其无征，后数日驿至，果地震陇西，于是皆服其妙。
+        </blockquote>
+        <div class="gloss">
+          <div><b>员径八尺</b>直径八尺（东汉 1 尺 ≈ 23.1 cm，约 1.85 m）</div>
+          <div><b>合盖隆起</b>器盖隆起，整体形如酒尊</div>
+          <div><b>都柱</b>位于尊内中央的主柱——本复原中为悬垂的重摆</div>
+          <div><b>傍行八道</b>都柱周围通向八个方向的滑道</div>
+          <div><b>施关发机</b>设置锁定机关（关）与触发机构（机）</div>
+          <div><b>牙机</b>龙口处的杠杆机构</div>
+          <div><b>七首不动</b>一龙发机后其余七龙被锁，不再吐丸</div>
+        </div>
+      </div>
+      <div class="tab" id="t2">
+        <h4>核心：惯性</h4>
+        <p>地震时，<b>地面带着仪器一起移动</b>，而悬挂着的重摆“都柱”由于惯性，几乎留在原处。于是从仪器内部看去，都柱好像向着与地面运动相反的方向“摆”了出去。</p>
+        <h4>为什么能指向震中</h4>
+        <p>地震波中跑得最快的是 <b>P 波（纵波）</b>，它让地面沿着“震中—观测点”的连线方向来回运动，而且最先到达。在本模拟采用的压缩初动下，地面先被推离震中，都柱便相对仪体偏向震中一侧，撞开<b>朝向震中的那一道</b>滑杆，正对震中方向的龙随即吐丸。</p>
+        <h4>为什么只吐一颗</h4>
+        <p>随后到达的 <b>S 波（横波）</b>振幅更大，方向与传播方向垂直；若不加控制，它会触发其他龙而给出错误方向。“<b>施关</b>”——第一颗丸落下后机构自锁——正是为此而设，史书称“虽一龙发机，而七首不动”。</p>
+        <h4>试一试</h4>
+        <p>把“地震强度”调到 0.6 以下：P 波的推动不足以越过间隙，等到 S 波到来才触发，吐丸的龙就可能偏离真实震中。这也是学界讨论地动仪“测向”能力时关注的问题。</p>
+      </div>
+      <div class="tab" id="t3">
+        <p>原器早已失传，内部结构仅有“中有都柱，傍行八道，施关发机”寥寥数字，历代复原方案主要有两类：</p>
+        <div class="cmp">
+          <figure>
+            <svg viewBox="0 0 160 150">
+              <path d="M30 140 L30 50 Q30 20 80 15 Q130 20 130 50 L130 140 Z" fill="none" stroke="#d9a858" stroke-width="2"/>
+              <line x1="80" y1="140" x2="88" y2="62" stroke="#e2553d" stroke-width="7" stroke-linecap="round"/>
+              <line x1="30" y1="70" x2="62" y2="70" stroke="#d9a858" stroke-width="3"/>
+              <line x1="98" y1="70" x2="130" y2="70" stroke="#d9a858" stroke-width="3"/>
+              <text x="80" y="148" fill="#e9dcc0" font-size="10" text-anchor="middle">立柱（倒立摆）</text>
+            </svg>
+            <figcaption><b>1951 年 · 王振铎方案</b><br />都柱为立在底部的细高柱，地震时向某一方向倾倒，推动该方向滑道中的机构使龙口吐丸。造型广为人知，曾长期出现在教科书中；但倒立柱极易被微小扰动推倒，实用性受到质疑。</figcaption>
+          </figure>
+          <figure>
+            <svg viewBox="0 0 160 150">
+              <path d="M30 140 L30 50 Q30 20 80 15 Q130 20 130 50 L130 140 Z" fill="none" stroke="#d9a858" stroke-width="2"/>
+              <line x1="40" y1="38" x2="120" y2="38" stroke="#d9a858" stroke-width="3"/>
+              <line x1="80" y1="38" x2="72" y2="110" stroke="#e9dcc0" stroke-width="2"/>
+              <rect x="60" y="80" width="24" height="34" rx="3" fill="#e2553d" transform="rotate(6 72 97)"/>
+              <line x1="30" y1="120" x2="60" y2="120" stroke="#d9a858" stroke-width="3"/>
+              <line x1="90" y1="120" x2="130" y2="120" stroke="#d9a858" stroke-width="3"/>
+              <text x="80" y="148" fill="#e9dcc0" font-size="10" text-anchor="middle">悬垂摆</text>
+            </svg>
+            <figcaption><b>2005 年 · 悬垂摆方案（本模型采用）</b><br />都柱为悬挂的重摆，地震时仪体移动而摆体保持惯性，相对位移推动八道中的滑杆，经杠杆机构使龙口张开；并设锁定机构保证只有一龙吐丸。符合现代地震仪“惯性摆”原理。</figcaption>
+          </figure>
+        </div>
+      </div>
+      <div class="tab" id="t4">
+        <table>
+          <tr><th>部位</th><th>本模型尺寸</th><th>依据</th></tr>
+          <tr><td>器身直径</td><td>1.85 m</td><td>“员径八尺”，东汉尺 23.1 cm</td></tr>
+          <tr><td>仪器通高</td><td id="hText">≈ 2.28 m（不含台座）</td><td>参照复原研究比例</td></tr>
+          <tr><td>台座</td><td>直径 3.5 m，高 0.20 m</td><td>展陈用，示意</td></tr>
+          <tr><td>铜丸</td><td>直径 5.6 cm</td><td>示意</td></tr>
+          <tr><td>都柱摆长</td><td>≈ 0.86 m</td><td>悬垂摆方案</td></tr>
+        </table>
+        <p class="note">说明：地动仪原物早已失传，本模型依据史书记载与现代复原研究重建。外形纹饰（篆文、山、龟、鸟、兽）为程序化生成的风格化浮雕；内部机构为便于理解的示意设计。为便于观察，模拟中的地面位移（厘米级）与时间尺度均经放大处理，真实地震引起的位移通常只有毫米级。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 开场 -->
+  <div id="intro" class="intro">
+    <div class="intro-card">
+      <div class="seal big"><span>候风</span><span>地动</span></div>
+      <h2>候风地动仪</h2>
+      <p class="lead">世界上第一台测定地震方向的仪器</p>
+      <p>“以精铜铸成，员径八尺，合盖隆起，形似酒尊……外有八龙，首衔铜丸，下有蟾蜍，张口承之。”</p>
+      <div id="loading" class="loading"><i></i><span id="loadText">正在铸造青铜……</span></div>
+      <button id="enter" class="primary" disabled>进入展厅</button>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
